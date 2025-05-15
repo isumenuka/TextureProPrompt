@@ -21,6 +21,13 @@ export async function getEnhancedRandomization(currentPrompt: {
     const randomSecondary = getRandomElement(secondaryColorTones);
     const randomLighting = getRandomElement(lightingStyles);
 
+    const fallbackSelection = {
+      materialType: randomMaterial,
+      primaryColorTone: randomPrimary,
+      secondaryColorTone: randomSecondary,
+      lightingStyle: randomLighting
+    };
+
     const prompt = `Create a visually harmonious texture combination.
       Current selection (for reference only):
       Material: ${currentPrompt.materialType || randomMaterial}
@@ -34,13 +41,13 @@ export async function getEnhancedRandomization(currentPrompt: {
       - Complementary color combinations
       
       Select EXACTLY ONE item from each of these lists:
-      Materials: ${JSON.stringify(materials.slice(0, 10))}... (full list available)
-      Primary Colors: ${JSON.stringify(primaryColorTones.slice(0, 10))}... (full list available)
-      Secondary Colors: ${JSON.stringify(secondaryColorTones.slice(0, 10))}... (full list available)
-      Lighting: ${JSON.stringify(lightingStyles.slice(0, 10))}... (full list available)
+      Materials: ${JSON.stringify(materials)}
+      Primary Colors: ${JSON.stringify(primaryColorTones)}
+      Secondary Colors: ${JSON.stringify(secondaryColorTones)}
+      Lighting: ${JSON.stringify(lightingStyles)}
 
       Return only a JSON object with these exact keys: materialType, primaryColorTone, secondaryColorTone, lightingStyle.
-      Values must exactly match items from the provided lists.`;
+      All fields are required. Values must exactly match items from the provided lists.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -50,28 +57,24 @@ export async function getEnhancedRandomization(currentPrompt: {
       const cleanJson = text.replace(/```json\n|\n```|```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
 
-      // Validate all returned values
-      if (!materials.includes(parsed.materialType) ||
+      // Validate that all required fields are present and valid
+      if (!parsed.materialType || !parsed.primaryColorTone || 
+          !parsed.secondaryColorTone || !parsed.lightingStyle ||
+          !materials.includes(parsed.materialType) ||
           !primaryColorTones.includes(parsed.primaryColorTone) ||
           !secondaryColorTones.includes(parsed.secondaryColorTone) ||
           !lightingStyles.includes(parsed.lightingStyle)) {
-        throw new Error('Invalid values returned from AI');
+        console.warn('Invalid or missing values in AI response, using fallback');
+        return fallbackSelection;
       }
 
       return parsed;
     } catch (e) {
-      console.error('AI response validation failed:', e);
-      // Fallback to pure random selection
-      return {
-        materialType: randomMaterial,
-        primaryColorTone: randomPrimary,
-        secondaryColorTone: randomSecondary,
-        lightingStyle: randomLighting
-      };
+      console.error('AI response parsing failed:', e);
+      return fallbackSelection;
     }
   } catch (error) {
     console.error('Gemini API error:', error);
-    // Fallback to pure random selection
     return {
       materialType: getRandomElement(materials),
       primaryColorTone: getRandomElement(primaryColorTones),
