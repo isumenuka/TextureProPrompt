@@ -42,6 +42,32 @@ const PromptGenerator: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(promptHistory));
   }, [promptHistory]);
 
+  // New effect to trigger AI suggestions when material type changes
+  useEffect(() => {
+    const getSuggestions = async () => {
+      if (promptData.materialType && !isEnhancedRandomizing) {
+        setIsEnhancedRandomizing(true);
+        try {
+          const suggestions = await getEnhancedRandomization({
+            materialType: promptData.materialType
+          });
+          setPromptData(prev => ({
+            ...prev,
+            primaryColorTone: suggestions.primaryColorTone,
+            secondaryColorTone: suggestions.secondaryColorTone,
+            lightingStyle: suggestions.lightingStyle
+          }));
+        } catch (error) {
+          console.error('Failed to get AI suggestions:', error);
+        } finally {
+          setIsEnhancedRandomizing(false);
+        }
+      }
+    };
+
+    getSuggestions();
+  }, [promptData.materialType]);
+
   const handleParameterChange = (key: keyof PromptData, value: string) => {
     setPromptData((prev) => ({
       ...prev,
