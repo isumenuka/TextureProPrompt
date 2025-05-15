@@ -9,4 +9,6 @@ export interface GeneratedPrompt extends PromptData {
   id: string;
   promptText: string;
   timestamp: number;
+  title?: string;
+  keywords?: string[];
 }
