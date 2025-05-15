@@ -8,7 +8,7 @@ import { materials } from '../data/materials';
 import { primaryColorTones, secondaryColorTones } from '../data/colorTones';
 import { lightingStyles } from '../data/lightingStyles';
 import { getRandomElement } from '../utils/random';
-import { getEnhancedRandomization } from '../utils/gemini';
+import { getEnhancedRandomization, generateTitleAndKeywords } from '../utils/gemini';
 import { PromptData, GeneratedPrompt as PromptType } from '../types';
 
 const STORAGE_KEY = 'texture-prompt-history';
@@ -22,6 +22,8 @@ const PromptGenerator: React.FC = () => {
     lightingStyle: '',
   });
 
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [isGeneratingCustom, setIsGeneratingCustom] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<PromptType | null>(null);
   const [promptHistory, setPromptHistory] = useState<PromptType[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -42,7 +44,6 @@ const PromptGenerator: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(promptHistory));
   }, [promptHistory]);
 
-  // New effect to trigger AI suggestions when material type changes
   useEffect(() => {
     const getSuggestions = async () => {
       if (promptData.materialType && !isEnhancedRandomizing) {
@@ -98,7 +99,6 @@ const PromptGenerator: React.FC = () => {
       if (enhancedResult) {
         setPromptData(enhancedResult);
       } else {
-        // Fallback to basic randomization
         setPromptData({
           materialType: getRandomElement(materials),
           primaryColorTone: getRandomElement(primaryColorTones),
@@ -108,7 +108,6 @@ const PromptGenerator: React.FC = () => {
       }
     } catch (error) {
       console.error('Enhanced randomization failed:', error);
-      // Fallback to basic randomization
       setPromptData({
         materialType: getRandomElement(materials),
         primaryColorTone: getRandomElement(primaryColorTones),
@@ -150,6 +149,38 @@ const PromptGenerator: React.FC = () => {
     }, 500);
   };
 
+  const handleGenerateCustom = async () => {
+    if (!customPrompt.trim()) return;
+
+    setIsGeneratingCustom(true);
+    try {
+      const result = await generateTitleAndKeywords(customPrompt);
+      if (result) {
+        const newPrompt: PromptType = {
+          id: uuidv4(),
+          materialType: 'Custom',
+          primaryColorTone: 'Custom',
+          secondaryColorTone: 'Custom',
+          lightingStyle: 'Custom',
+          promptText: customPrompt,
+          title: result.title,
+          keywords: result.keywords.split(',').map(k => k.trim()),
+          timestamp: Date.now(),
+        };
+
+        setGeneratedPrompt(newPrompt);
+        setPromptHistory((prev) => {
+          const updatedHistory = [newPrompt, ...prev].slice(0, MAX_HISTORY);
+          return updatedHistory;
+        });
+      }
+    } catch (error) {
+      console.error('Failed to generate custom prompt:', error);
+    } finally {
+      setIsGeneratingCustom(false);
+    }
+  };
+
   const clearHistory = () => {
     setPromptHistory([]);
     localStorage.removeItem(STORAGE_KEY);
@@ -164,6 +195,39 @@ const PromptGenerator: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="mb-6">
+          <label htmlFor="customPrompt" className="block text-sm font-medium text-gray-700 mb-1">
+            Custom Prompt
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              id="customPrompt"
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              placeholder="Enter your custom prompt for title and keyword generation..."
+              className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+            <button
+              onClick={handleGenerateCustom}
+              disabled={!customPrompt.trim() || isGeneratingCustom}
+              className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isGeneratingCustom ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Processing...
+                </>
+              ) : (
+                'Generate Title & Keywords'
+              )}
+            </button>
+          </div>
+        </div>
+
         <div className="flex flex-col md:flex-row md:gap-6">
           <div className="w-full md:w-1/2">
             <ParameterSelector

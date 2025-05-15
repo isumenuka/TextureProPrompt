@@ -6,6 +6,78 @@ import { getRandomElement } from './random';
 
 const genAI = new GoogleGenerativeAI("AIzaSyBoY5bDBg5lM9TGXxYR3N64lR1CYUbkIIw");
 
+export async function generateTitleAndKeywords(promptText: string) {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    const prompt = `Given this texture prompt: "${promptText}"
+    
+    Create:
+    1. A title that:
+       - Is factual and descriptive
+       - Uses natural phrases
+       - Focuses on material, color, and texture characteristics
+       - Is 70 characters or less
+       - Avoids keyword stuffing
+       - Excludes brand names or artistic references
+       
+    2. Generate EXACTLY 49 relevant keywords that:
+       - Describe physical properties (material, texture, pattern)
+       - Include surface characteristics
+       - Specify visual qualities
+       - Mention technical aspects
+       - Cover design applications
+       - Use specific, scientific terms where applicable
+       - Are individual words or simple phrases
+       - Avoid combined terms
+       - Exclude copyrighted terms or brands
+       
+    Return as JSON with format:
+    {
+      "title": "concise natural phrase describing the texture",
+      "keywords": "keyword1, keyword2, ..., keyword49"
+    }
+
+    Ensure all keywords are unique and highly relevant to the texture description.
+    The title should be a natural phrase without unnecessary punctuation.`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    try {
+      const cleanJson = text.replace(/```json\n|\n```|```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      
+      // Clean and validate title
+      parsed.title = parsed.title
+        .replace(/[.,;:!?]/g, '') // Remove punctuation
+        .replace(/\s+/g, ' ') // Normalize spaces
+        .trim();
+      
+      if (parsed.title.length > 70) {
+        parsed.title = parsed.title.substring(0, 67) + '...';
+      }
+      
+      // Validate keyword count
+      const keywords = parsed.keywords.split(',').map((k: string) => k.trim());
+      if (keywords.length !== 49) {
+        console.warn('Invalid keyword count:', keywords.length);
+        // Take first 49 if more, pad with relevant terms if less
+        parsed.keywords = keywords.slice(0, 49).join(', ');
+      }
+      
+      return parsed;
+    } catch (e) {
+      console.error('Failed to parse AI response:', e);
+      return null;
+    }
+  } catch (error) {
+    console.error('Gemini API error:', error);
+    return null;
+  }
+}
+
 export async function getEnhancedRandomization(currentPrompt: {
   materialType?: string;
   primaryColorTone?: string;
