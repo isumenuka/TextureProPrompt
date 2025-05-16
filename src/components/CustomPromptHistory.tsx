@@ -1,24 +1,24 @@
 import React from 'react';
-import PromptHistoryItem from './PromptHistoryItem';
-import { GeneratedPrompt } from '../types';
 import { History } from 'lucide-react';
+import { CustomPrompt } from '../types';
+import CustomPromptHistoryItem from './CustomPromptHistoryItem';
 
-interface PromptHistoryProps {
-  prompts: GeneratedPrompt[];
+interface CustomPromptHistoryProps {
+  prompts: CustomPrompt[];
   onClear: () => void;
 }
 
-const PromptHistory: React.FC<PromptHistoryProps> = ({ prompts, onClear }) => {
+const CustomPromptHistory: React.FC<CustomPromptHistoryProps> = ({ prompts, onClear }) => {
   if (prompts.length === 0) {
     return null;
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
           <History className="h-4 w-4 text-gray-500" />
-          <h3 className="text-lg font-medium text-gray-900">Recent Prompts</h3>
+          <h3 className="text-lg font-medium text-gray-900">Custom Prompt History</h3>
         </div>
         <button
           onClick={onClear}
@@ -29,11 +29,11 @@ const PromptHistory: React.FC<PromptHistoryProps> = ({ prompts, onClear }) => {
       </div>
       <div className="space-y-3">
         {prompts.map((prompt) => (
-          <PromptHistoryItem key={prompt.id} prompt={prompt} />
+          <CustomPromptHistoryItem key={prompt.id} prompt={prompt} />
         ))}
       </div>
     </div>
   );
 };
 
-export default PromptHistory;
+export default CustomPromptHistory;

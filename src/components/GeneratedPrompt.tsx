@@ -46,7 +46,7 @@ const GeneratedPrompt: React.FC<GeneratedPromptProps> = ({ prompt }) => {
   const CopyButton = ({ type, text }: { type: 'title' | 'keywords' | 'prompt', text: string }) => (
     <button
       onClick={() => handleCopy(type, text)}
-      className="flex items-center space-x-1 text-amber-600 hover:text-amber-800 transition-colors px-2 py-1 rounded-md hover:bg-amber-50"
+      className="text-amber-600 hover:text-amber-800 p-2 rounded-lg hover:bg-amber-50 transition-colors"
       aria-label={`Copy ${type}`}
     >
       {copiedStates[type] ? (
@@ -54,69 +54,70 @@ const GeneratedPrompt: React.FC<GeneratedPromptProps> = ({ prompt }) => {
       ) : (
         <Copy className="h-4 w-4" />
       )}
-      <span className="text-sm">{copiedStates[type] ? 'Copied!' : `Copy ${type}`}</span>
     </button>
   );
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 mb-4 animate-fadeIn">
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="text-lg font-medium text-gray-800">Generated Prompt</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={handleGenerateTitleAndKeywords}
-            disabled={isGenerating}
-            className="flex items-center space-x-1 text-amber-600 hover:text-amber-800 transition-colors disabled:opacity-50 px-2 py-1 rounded-md hover:bg-amber-50"
-            aria-label="Generate title and keywords"
-          >
-            <Wand2 className="h-4 w-4" />
-            <span className="text-sm">{isGenerating ? 'Generating...' : 'Generate Title'}</span>
-          </button>
-        </div>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium text-gray-900">Generated Prompt</h3>
+        <button
+          onClick={handleGenerateTitleAndKeywords}
+          disabled={isGenerating}
+          className="text-amber-600 hover:text-amber-800 p-2 rounded-lg hover:bg-amber-50 transition-colors disabled:opacity-50"
+        >
+          <Wand2 className="h-4 w-4" />
+        </button>
       </div>
 
       {title && (
-        <div className="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
+        <div className="mb-4">
           <div className="flex justify-between items-center mb-1">
-            <span className="font-medium text-sm text-gray-700">Title</span>
+            <span className="text-sm font-medium text-gray-700">Title</span>
             <CopyButton type="title" text={title} />
           </div>
-          <p className="text-gray-700">{title}</p>
+          <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">{title}</p>
         </div>
       )}
 
       {keywords.length > 0 && (
-        <div className="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
+        <div className="mb-4">
           <div className="flex justify-between items-center mb-1">
-            <span className="font-medium text-sm text-gray-700">Keywords</span>
+            <span className="text-sm font-medium text-gray-700">Keywords</span>
             <CopyButton type="keywords" text={keywords.join(', ')} />
           </div>
-          <p className="text-gray-700">{keywords.join(', ')}</p>
+          <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">{keywords.join(', ')}</p>
         </div>
       )}
 
-      <div className="p-3 bg-gray-50 rounded border border-gray-200">
+      <div>
         <div className="flex justify-between items-center mb-1">
-          <span className="font-medium text-sm text-gray-700">Prompt</span>
+          <span className="text-sm font-medium text-gray-700">Prompt</span>
           <CopyButton type="prompt" text={prompt.promptText} />
         </div>
-        <p className="text-gray-700 break-words">{prompt.promptText}</p>
+        <p className="text-gray-800 bg-gray-50 p-3 rounded-lg break-words">{prompt.promptText}</p>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-500">
-        <div>
-          <span className="font-medium">Material:</span> {prompt.materialType}
+      {prompt.materialType !== 'Custom' && (
+        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div className="bg-gray-50 p-2 rounded-lg">
+            <span className="font-medium text-gray-700">Material:</span>
+            <span className="text-gray-600 ml-2">{prompt.materialType}</span>
+          </div>
+          <div className="bg-gray-50 p-2 rounded-lg">
+            <span className="font-medium text-gray-700">Primary Color:</span>
+            <span className="text-gray-600 ml-2">{prompt.primaryColorTone}</span>
+          </div>
+          <div className="bg-gray-50 p-2 rounded-lg">
+            <span className="font-medium text-gray-700">Secondary Color:</span>
+            <span className="text-gray-600 ml-2">{prompt.secondaryColorTone}</span>
+          </div>
+          <div className="bg-gray-50 p-2 rounded-lg">
+            <span className="font-medium text-gray-700">Lighting:</span>
+            <span className="text-gray-600 ml-2">{prompt.lightingStyle}</span>
+          </div>
         </div>
-        <div>
-          <span className="font-medium">Primary Color:</span> {prompt.primaryColorTone}
-        </div>
-        <div>
-          <span className="font-medium">Secondary Color:</span> {prompt.secondaryColorTone}
-        </div>
-        <div>
-          <span className="font-medium">Lighting:</span> {prompt.lightingStyle}
-        </div>
-      </div>
+      )}
     </div>
   );
 };

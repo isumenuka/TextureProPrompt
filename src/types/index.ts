@@ -12,3 +12,11 @@ export interface GeneratedPrompt extends PromptData {
   title?: string;
   keywords?: string[];
 }
+
+export interface CustomPrompt {
+  id: string;
+  promptText: string;
+  timestamp: number;
+  title: string;
+  keywords: string[];
+}
