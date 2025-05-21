@@ -22,15 +22,29 @@ export async function generateTitleAndKeywords(promptText: string) {
        - Excludes brand names or artistic references
        
     2. Generate EXACTLY 49 relevant keywords that:
-       - Describe physical properties (material, texture, pattern)
-       - Include surface characteristics
-       - Specify visual qualities
-       - Mention technical aspects
-       - Cover design applications
+       - Describe physical properties (material type, surface texture, pattern)
+       - Include technical specifications (resolution, dimensions, format)
+       - Cover visual qualities (color, tone, contrast, brightness)
+       - Specify lighting conditions and effects
+       - Include industry-specific terminology
+       - Mention common applications and use cases
+       - Consider design trends and styles
        - Use specific, scientific terms where applicable
        - Are individual words or simple phrases
        - Avoid combined terms
        - Exclude copyrighted terms or brands
+       - Include relevant synonyms
+       - Cover both broad and specific aspects
+       - Include material processing methods
+       - Consider environmental factors
+       
+    Keywords should be organized into these categories:
+    - Material Properties (10 keywords)
+    - Visual Characteristics (10 keywords)
+    - Technical Aspects (8 keywords)
+    - Surface Details (8 keywords)
+    - Lighting & Effects (7 keywords)
+    - Applications (6 keywords)
        
     Return as JSON with format:
     {
@@ -38,7 +52,7 @@ export async function generateTitleAndKeywords(promptText: string) {
       "keywords": "keyword1, keyword2, ..., keyword49"
     }
 
-    Ensure all keywords are unique and highly relevant to the texture description.
+    Ensure all keywords are unique, highly relevant, and properly categorized.
     The title should be a natural phrase without unnecessary punctuation.`;
 
     const result = await model.generateContent(prompt);
@@ -59,12 +73,39 @@ export async function generateTitleAndKeywords(promptText: string) {
         parsed.title = parsed.title.substring(0, 67) + '...';
       }
       
-      // Validate keyword count
+      // Validate keyword count and quality
       const keywords = parsed.keywords.split(',').map((k: string) => k.trim());
+      
+      // Ensure exactly 49 keywords
       if (keywords.length !== 49) {
         console.warn('Invalid keyword count:', keywords.length);
+        
         // Take first 49 if more, pad with relevant terms if less
-        parsed.keywords = keywords.slice(0, 49).join(', ');
+        if (keywords.length > 49) {
+          parsed.keywords = keywords.slice(0, 49).join(', ');
+        } else {
+          // Add generic texture-related keywords to reach 49
+          const additionalKeywords = [
+            'seamless', 'tileable', 'high resolution', 'detailed',
+            'professional', 'quality', 'digital', 'surface',
+            'pattern', 'material', 'texture', 'background'
+          ];
+          
+          while (keywords.length < 49) {
+            const additional = additionalKeywords[keywords.length % additionalKeywords.length];
+            if (!keywords.includes(additional)) {
+              keywords.push(additional);
+            }
+          }
+          parsed.keywords = keywords.join(', ');
+        }
+      }
+      
+      // Remove any duplicate keywords
+      const uniqueKeywords = [...new Set(keywords)];
+      if (uniqueKeywords.length !== keywords.length) {
+        console.warn('Duplicate keywords detected');
+        parsed.keywords = uniqueKeywords.slice(0, 49).join(', ');
       }
       
       return parsed;
