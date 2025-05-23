@@ -1,18 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Wand2, Loader2 } from 'lucide-react';
-import ParameterSelector from './ParameterSelector';
-import GeneratedPrompt from './GeneratedPrompt';
-import PromptHistory from './PromptHistory';
+import { STORAGE_KEYS, MAX_HISTORY_ITEMS } from '../config/constants';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { getEnhancedRandomization } from '../services/gemini';
 import { materials } from '../data/materials';
 import { primaryColorTones, secondaryColorTones } from '../data/colorTones';
 import { lightingStyles } from '../data/lightingStyles';
-import { getRandomElement } from '../utils/random';
-import { getEnhancedRandomization, generateTitleAndKeywords } from '../utils/gemini';
-import { PromptData, GeneratedPrompt as PromptType } from '../types';
-
-const STORAGE_KEY = 'texturepro-generated-prompt-history';
-const MAX_HISTORY = 10;
+import { getRandomUnusedOption } from '../utils/selectionManager';
+import type { PromptData, GeneratedPrompt } from '../types';
+import ParameterSelector from './ParameterSelector';
+import GeneratedPrompt from './GeneratedPrompt';
+import PromptHistory from './PromptHistory';
 
 const PromptGenerator: React.FC = () => {
   const [promptData, setPromptData] = useState<PromptData>({
@@ -22,89 +21,47 @@ const PromptGenerator: React.FC = () => {
     lightingStyle: '',
   });
 
-  const [generatedPrompt, setGeneratedPrompt] = useState<PromptType | null>(null);
-  const [promptHistory, setPromptHistory] = useState<PromptType[]>([]);
+  const [generatedPrompt, setGeneratedPrompt] = useState<GeneratedPrompt | null>(null);
+  const [promptHistory, setPromptHistory] = useLocalStorage<GeneratedPrompt[]>(
+    STORAGE_KEYS.GENERATED_PROMPT_HISTORY,
+    []
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEnhancedRandomizing, setIsEnhancedRandomizing] = useState(false);
 
-  useEffect(() => {
-    const savedHistory = localStorage.getItem(STORAGE_KEY);
-    if (savedHistory) {
-      try {
-        setPromptHistory(JSON.parse(savedHistory));
-      } catch (error) {
-        console.error('Failed to parse prompt history:', error);
-      }
-    }
-  }, []);
+  const handleParameterChange = (key: keyof PromptData, value: string) => {
+    setPromptData(prev => ({ ...prev, [key]: value }));
+  };
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(promptHistory));
-  }, [promptHistory]);
-
-  useEffect(() => {
-    const getSuggestions = async () => {
-      if (promptData.materialType && !isEnhancedRandomizing) {
-        setIsEnhancedRandomizing(true);
-        try {
-          const suggestions = await getEnhancedRandomization({
-            materialType: promptData.materialType
-          });
-          setPromptData(prev => ({
-            ...prev,
-            primaryColorTone: suggestions.primaryColorTone,
-            secondaryColorTone: suggestions.secondaryColorTone,
-            lightingStyle: suggestions.lightingStyle
-          }));
-        } catch (error) {
-          console.error('Failed to get AI suggestions:', error);
-        } finally {
-          setIsEnhancedRandomizing(false);
-        }
-      }
+  const handleRandomizeParameter = (key: keyof PromptData) => {
+    const optionsMap = {
+      materialType: materials,
+      primaryColorTone: primaryColorTones,
+      secondaryColorTone: secondaryColorTones,
+      lightingStyle: lightingStyles,
     };
 
-    getSuggestions();
-  }, [promptData.materialType]);
+    const randomValue = getRandomUnusedOption(
+      promptHistory,
+      optionsMap[key],
+      key,
+      promptData[key]
+    );
 
-  const handleParameterChange = (key: keyof PromptData, value: string) => {
-    setPromptData((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
-  const handleRandomMaterial = () => {
-    handleParameterChange('materialType', getRandomElement(materials));
-  };
-
-  const handleRandomPrimaryColor = () => {
-    handleParameterChange('primaryColorTone', getRandomElement(primaryColorTones));
-  };
-
-  const handleRandomSecondaryColor = () => {
-    handleParameterChange('secondaryColorTone', getRandomElement(secondaryColorTones));
-  };
-
-  const handleRandomLighting = () => {
-    handleParameterChange('lightingStyle', getRandomElement(lightingStyles));
+    handleParameterChange(key, randomValue);
   };
 
   const handleRandomizeAll = async () => {
     setIsEnhancedRandomizing(true);
     try {
-      const enhancedResult = await getEnhancedRandomization(promptData);
-      if (enhancedResult) {
-        setPromptData(enhancedResult);
-      }
-    } catch (error) {
-      console.error('Enhanced randomization failed:', error);
-      setPromptData({
-        materialType: getRandomElement(materials),
-        primaryColorTone: getRandomElement(primaryColorTones),
-        secondaryColorTone: getRandomElement(secondaryColorTones),
-        lightingStyle: getRandomElement(lightingStyles),
-      });
+      const result = await getEnhancedRandomization(
+        materials,
+        primaryColorTones,
+        secondaryColorTones,
+        lightingStyles,
+        promptHistory
+      );
+      setPromptData(result);
     } finally {
       setIsEnhancedRandomizing(false);
     }
@@ -122,25 +79,15 @@ const PromptGenerator: React.FC = () => {
     try {
       const promptText = `${materialType} texture, seamless and high resolution, top view, ${primaryColorTone} and ${secondaryColorTone}, realistic surface detail, natural patterns, intricate texture, ${lightingStyle}, ultra detailed, texture background`;
       
-      const titleAndKeywords = await generateTitleAndKeywords(promptText);
-      
-      const newPrompt: PromptType = {
+      const newPrompt: GeneratedPrompt = {
         id: uuidv4(),
         ...promptData,
         promptText,
-        timestamp: Date.now(),
-        title: titleAndKeywords?.title || '',
-        keywords: titleAndKeywords?.keywords.split(',').map(k => k.trim()) || [],
+        timestamp: Date.now()
       };
       
       setGeneratedPrompt(newPrompt);
-      
-      setPromptHistory((prev) => {
-        const updatedHistory = [newPrompt, ...prev].slice(0, MAX_HISTORY);
-        return updatedHistory;
-      });
-    } catch (error) {
-      console.error('Failed to generate prompt:', error);
+      setPromptHistory(prev => [newPrompt, ...prev].slice(0, MAX_HISTORY_ITEMS));
     } finally {
       setIsGenerating(false);
     }
@@ -148,14 +95,9 @@ const PromptGenerator: React.FC = () => {
 
   const clearHistory = () => {
     setPromptHistory([]);
-    localStorage.removeItem(STORAGE_KEY);
   };
 
-  const isFormComplete = 
-    promptData.materialType && 
-    promptData.primaryColorTone && 
-    promptData.secondaryColorTone && 
-    promptData.lightingStyle;
+  const isFormComplete = Object.values(promptData).every(Boolean);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
@@ -169,14 +111,14 @@ const PromptGenerator: React.FC = () => {
             options={materials}
             value={promptData.materialType}
             onChange={(value) => handleParameterChange('materialType', value)}
-            onRandom={handleRandomMaterial}
+            onRandom={() => handleRandomizeParameter('materialType')}
           />
           <ParameterSelector
             label="Primary Color"
             options={primaryColorTones}
             value={promptData.primaryColorTone}
             onChange={(value) => handleParameterChange('primaryColorTone', value)}
-            onRandom={handleRandomPrimaryColor}
+            onRandom={() => handleRandomizeParameter('primaryColorTone')}
           />
         </div>
         <div>
@@ -185,14 +127,14 @@ const PromptGenerator: React.FC = () => {
             options={secondaryColorTones}
             value={promptData.secondaryColorTone}
             onChange={(value) => handleParameterChange('secondaryColorTone', value)}
-            onRandom={handleRandomSecondaryColor}
+            onRandom={() => handleRandomizeParameter('secondaryColorTone')}
           />
           <ParameterSelector
             label="Lighting"
             options={lightingStyles}
             value={promptData.lightingStyle}
             onChange={(value) => handleParameterChange('lightingStyle', value)}
-            onRandom={handleRandomLighting}
+            onRandom={() => handleRandomizeParameter('lightingStyle')}
           />
         </div>
       </div>
@@ -223,7 +165,6 @@ const PromptGenerator: React.FC = () => {
       </div>
 
       {generatedPrompt && <GeneratedPrompt prompt={generatedPrompt} />}
-      
       <PromptHistory prompts={promptHistory} onClear={clearHistory} />
     </div>
   );

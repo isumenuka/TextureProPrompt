@@ -1,25 +1,19 @@
 /**
- * Returns a random element from the provided array
+ * Returns a random element from an array
+ * @param array - The array to select from
+ * @returns A random element from the array
  */
 export const getRandomElement = <T>(array: T[]): T => {
-  const randomIndex = Math.floor(Math.random() * array.length);
-  return array[randomIndex];
+  return array[Math.floor(Math.random() * array.length)];
 };
 
 /**
- * Returns a specified number of unique random elements from the provided array
+ * Returns multiple unique random elements from an array
+ * @param array - The array to select from
+ * @param count - Number of elements to return
+ * @returns Array of unique random elements
  */
 export const getRandomElements = <T>(array: T[], count: number): T[] => {
-  if (count >= array.length) return [...array];
-  
-  const result: T[] = [];
-  const copyArray = [...array];
-  
-  for (let i = 0; i < count; i++) {
-    const randomIndex = Math.floor(Math.random() * copyArray.length);
-    result.push(copyArray[randomIndex]);
-    copyArray.splice(randomIndex, 1);
-  }
-  
-  return result;
+  const shuffled = [...array].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, array.length));
 };
