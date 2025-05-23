@@ -1,25 +1,20 @@
 import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
-import { generateTitleAndKeywords } from '../utils/gemini';
-import { CustomPrompt } from '../types';
+import { STORAGE_KEYS, MAX_PROMPT_LENGTH, MAX_HISTORY_ITEMS } from '../config/constants';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { generateTitleAndKeywords } from '../services/gemini';
+import type { CustomPrompt } from '../types';
 import CustomPromptHistory from './CustomPromptHistory';
-
-const MAX_PROMPT_LENGTH = 500;
-const STORAGE_KEY = 'texturepro-custom-prompt-history';
 
 const CustomPromptGenerator: React.FC = () => {
   const [customPrompt, setCustomPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [customError, setCustomError] = useState('');
-  const [promptHistory, setPromptHistory] = useState<CustomPrompt[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  React.useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(promptHistory));
-  }, [promptHistory]);
+  const [promptHistory, setPromptHistory] = useLocalStorage<CustomPrompt[]>(
+    STORAGE_KEYS.CUSTOM_PROMPT_HISTORY,
+    []
+  );
 
   const handleGenerate = async () => {
     if (!customPrompt.trim()) return;
@@ -38,10 +33,7 @@ const CustomPromptGenerator: React.FC = () => {
           timestamp: Date.now(),
         };
 
-        setPromptHistory((prev) => {
-          const updatedHistory = [newPrompt, ...prev].slice(0, 10);
-          return updatedHistory;
-        });
+        setPromptHistory(prev => [newPrompt, ...prev].slice(0, MAX_HISTORY_ITEMS));
         setCustomPrompt('');
       }
     } catch (error) {
@@ -54,7 +46,6 @@ const CustomPromptGenerator: React.FC = () => {
 
   const clearHistory = () => {
     setPromptHistory([]);
-    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
